@@ -1,0 +1,17 @@
+---
+driver:
+  name: vagrant
+
+provisioner:
+  name: chef_zero
+
+platforms:
+  - name: ubuntu-12.04
+
+suites:
+  - name: default
+    run_list:
+      - recipe[scpr-logstash-forwarder::default]
+    attributes:
+      scpr_logstash_forwarder:
+        server: 127.0.0.1:5960

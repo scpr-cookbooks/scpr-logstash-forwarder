@@ -1,0 +1,8 @@
+{
+  "network": {
+    "servers": <%= @servers.to_json %>,
+    "ssl ca": "<%= @ssl_path %>/logstash_forwarder.crt",
+    "timeout": 15
+  },
+  "files": <%= @files.to_json %>
+}
