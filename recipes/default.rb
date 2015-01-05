@@ -9,15 +9,24 @@
 
 include_recipe "apt"
 
-apt_repository 'logstash-forwarder' do
-  uri         'http://packages.elasticsearch.org/logstashforwarder/debian'
-  components  ['stable','main']
-  key         'http://packages.elasticsearch.org/GPG-KEY-elasticsearch'
-end
+#apt_repository 'logstash-forwarder' do
+#  uri         'http://packages.elasticsearch.org/logstashforwarder/debian'
+#  components  ['stable','main']
+#  key         'http://packages.elasticsearch.org/GPG-KEY-elasticsearch'
+#end
 
 # -- Install logstash-forwarder -- #
 
-package 'logstash-forwarder'
+cookbook_file "#{Chef::Config[:file_cache_path]}/logstash-forwarder.deb" do
+  action :create
+  source "logstash-forwarder_#{node.scpr_logstash_forwarder.version}_amd64.deb"
+end
+
+package 'logstash-forwarder' do
+  action :install
+  provider Chef::Provider::Package::Dpkg
+  source "#{Chef::Config[:file_cache_path]}/logstash-forwarder.deb"
+end
 
 file "/etc/init.d/logstash-forwarder" do
   action :nothing
