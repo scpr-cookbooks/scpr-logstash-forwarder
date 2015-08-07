@@ -1,9 +1,9 @@
 name             'scpr-logstash-forwarder'
 maintainer       'Southern California Public Radio'
 maintainer_email 'erichardson@scpr.org'
-license          'all_rights'
+license          'apache2'
 description      'Installs/Configures scpr-logstash-forwarder'
 long_description 'Installs/Configures scpr-logstash-forwarder'
-version          '0.2.1'
+version          '1.0.0'
 
-depends "apt"
+depends "logstash-forwarder"

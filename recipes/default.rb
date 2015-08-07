@@ -4,92 +4,50 @@
 #
 # Copyright (c) 2014 Southern California Public Radio, All Rights Reserved.
 
+# -- write our SSL Cert -- #
 
-# -- Add the repo -- #
+# find our databag item for the logstash-forwarder cert
+cert = begin data_bag_item(node.scpr_logstash_forwarder.databag,node.scpr_logstash_forwarder.databag_item) rescue nil end
 
-include_recipe "apt"
-
-#apt_repository 'logstash-forwarder' do
-#  uri         'http://packages.elasticsearch.org/logstashforwarder/debian'
-#  components  ['stable','main']
-#  key         'http://packages.elasticsearch.org/GPG-KEY-elasticsearch'
-#end
-
-# -- Install logstash-forwarder -- #
-
-cookbook_file "#{Chef::Config[:file_cache_path]}/logstash-forwarder.deb" do
-  action :create
-  source "logstash-forwarder_#{node.scpr_logstash_forwarder.version}_amd64.deb"
-end
-
-package 'logstash-forwarder' do
-  action :install
-  provider Chef::Provider::Package::Dpkg
-  source "#{Chef::Config[:file_cache_path]}/logstash-forwarder.deb"
-end
-
-file "/etc/init.d/logstash-forwarder" do
-  action :nothing
-end
-
-service "logstash-forwarder-sysv" do
-  action        :disable
-  supports      [:stop, :start, :enable, :disable, :reload]
-  service_name  "logstash-forwarder"
-  provider      Chef::Provider::Service::Init::Debian
-  notifies      :delete, "file[/etc/init.d/logstash-forwarder]"
-end
-
-# write an upstart config
-cookbook_file "/etc/init/logstash-forwarder.conf" do
-  action  :create
-  mode    0644
-end
-
-service "logstash-forwarder" do
-  action :start
-  provider      Chef::Provider::Service::Upstart
-  supports [:start,:stop,:restart]
-end
-
-#file "/etc/init.d/logstash-forwarder" do
-#  action :delete
-#end
-
-# -- write our SSL files -- #
-
-["logstash_forwarder.crt"].each do |f|
-  cookbook_file "#{node.scpr_logstash_forwarder.ssl_path}/#{f}" do
+if cert
+  file node.scpr_logstash_forwarder.ssl_cert do
     action  :create
-    owner   'root'
     mode    0644
+    content cert['cert']
     notifies :restart, "service[logstash-forwarder]"
   end
 end
 
-# -- What files are we watching? -- #
-
-files = []
-
-node.scpr_logstash_forwarder.files.each_pair do |k,conf|
-  files << conf.to_hash
-end
-
-# -- Set up our config file -- #
-
 directory "/etc/logstash-forwarder" do
-  action :create
-  owner "root"
-end
-
-template "/etc/logstash-forwarder/forwarder.json" do
   action  :create
   owner   "root"
-  mode    0644
-  variables({
-    ssl_path: node.scpr_logstash_forwarder.ssl_path,
-    servers:  [node.scpr_logstash_forwarder.server],
-    files:    files,
-  })
-  notifies :restart, "service[logstash-forwarder]"
 end
+
+# -- Install logstash-forwarder -- #
+
+include_recipe "logstash-forwarder"
+
+# -- Transition from Upstart job -- #
+
+file "/etc/init/logstash-forwarder.conf" do
+  action  :nothing
+  mode    0644
+end
+
+service "logstash-forwarder-upstart" do
+  action    [:stop,:disable]
+  provider  Chef::Provider::Service::Upstart
+  supports  [:start,:stop,:restart,:enable,:disable]
+  notifies  :delete, "file[/etc/init/logstash-forwarder.conf]"
+end
+
+# -- What files are we watching? -- #
+
+# support attribute-based specs while we transition to the LWRP
+node.scpr_logstash_forwarder.files.each_pair do |k,conf|
+  log_forward k do
+    paths   conf['paths']
+    fields  conf['fields']
+  end
+end
+
