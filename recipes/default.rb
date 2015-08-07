@@ -27,6 +27,22 @@ end
 
 include_recipe "logstash-forwarder"
 
+# make sure all our installs get the same init file
+cookbook_file "/etc/init.d/logstash-forwarder" do
+  action    :create
+  mode      0755
+  source    "logstash-forwarder.sysv"
+  notifies  :restart, "service[logstash-forwarder]"
+end
+
+# write our defaults file
+template "/etc/default/logstash-forwarder" do
+  action    :create
+  mode      0644
+  source    "logstash-forwarder.defaults.erb"
+  notifies  :restart, "service[logstash-forwarder]"
+end
+
 # -- Transition from Upstart job -- #
 
 file "/etc/init/logstash-forwarder.conf" do
@@ -40,6 +56,11 @@ service "logstash-forwarder-upstart" do
   service_name  "logstash-forwarder"
   supports      [:start,:stop,:restart,:enable,:disable]
   notifies      :delete, "file[/etc/init/logstash-forwarder.conf]"
+end
+
+# remove our old config file
+file "/etc/logstash-forwarder/forwarder.json" do
+  action :delete
 end
 
 # -- What files are we watching? -- #
