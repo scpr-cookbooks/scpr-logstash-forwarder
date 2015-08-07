@@ -35,10 +35,11 @@ file "/etc/init/logstash-forwarder.conf" do
 end
 
 service "logstash-forwarder-upstart" do
-  action    [:stop,:disable]
-  provider  Chef::Provider::Service::Upstart
-  supports  [:start,:stop,:restart,:enable,:disable]
-  notifies  :delete, "file[/etc/init/logstash-forwarder.conf]"
+  action        [:stop,:disable]
+  provider      Chef::Provider::Service::Upstart
+  service_name  "logstash-forwarder"
+  supports      [:start,:stop,:restart,:enable,:disable]
+  notifies      :delete, "file[/etc/init/logstash-forwarder.conf]"
 end
 
 # -- What files are we watching? -- #
